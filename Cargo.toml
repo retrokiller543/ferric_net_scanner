@@ -1,6 +1,6 @@
 [package]
-name = "arp_scan"
-version = "0.1.0"
+name = "ferric_net_scanner"
+version = "0.0.0"
 edition = "2021"
 
 [dependencies]
