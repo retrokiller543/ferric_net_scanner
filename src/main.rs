@@ -1,8 +1,9 @@
 #![feature(panic_info_message)]
+#![allow(unused)]
 
+mod host;
 mod scan_network;
 mod scan_ports;
-mod host;
 
 use std::net::Ipv4Addr;
 

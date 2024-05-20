@@ -2,6 +2,7 @@ use libarp::client::ArpClient;
 
 use libarp::interfaces::{Interface, MacAddr};
 
+use crate::host::Host;
 use anyhow::{anyhow, Result};
 use dns_lookup::lookup_addr;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -14,7 +15,6 @@ use std::sync::{
     Arc, Mutex,
 };
 use std::time::Duration;
-use crate::host::Host;
 
 pub(crate) fn get_mac_for_ip(ip: Ipv4Addr, arp_client: &mut ArpClient) -> Result<MacAddr> {
     let timeout = Duration::from_millis(250);
@@ -31,10 +31,7 @@ pub(crate) fn get_mac_for_ip(ip: Ipv4Addr, arp_client: &mut ArpClient) -> Result
     Ok(result)
 }
 
-pub async fn scan_network(
-    ips: Vec<Ipv4Addr>,
-    iface: Option<String>,
-) -> Result<Vec<Host>> {
+pub async fn scan_network(ips: Vec<Ipv4Addr>, iface: Option<String>) -> Result<Vec<Host>> {
     let iface = if let Some(interface) = iface {
         Interface::new_by_name(&interface).ok_or(anyhow!("Failed to find interface"))?
     } else {
