@@ -2,14 +2,17 @@
 
 mod scan_network;
 mod scan_ports;
+mod host;
 
 use std::net::Ipv4Addr;
 
+use crate::scan_network::scan_network;
+use crate::scan_ports::scan_ports;
 use anyhow::{Error, Result};
 use clap::error::ErrorKind;
-use crate::scan_network::scan_network;
 use clap::Parser;
-use crate::scan_ports::scan_ports;
+
+const MAC_ADDRESS_DB: &str = include_str!("../manuf.txt");
 
 /// A simple network scanner CLI tool
 #[derive(Parser, Debug)]
@@ -42,6 +45,9 @@ struct Args {
     /// The range of ports to scan
     #[arg(short = 'R', long = "pR")]
     port_range: Option<String>,
+
+    #[arg(short, long)]
+    vendor: bool,
 }
 
 fn parse_ports(ports: &str) -> Vec<u16> {
@@ -183,21 +189,28 @@ async fn main() -> Result<()> {
         all_ports.extend(parse_ports(&ports));
     }
 
+    let hosts = scan_network(ips.clone(), args.interface).await?;
+    let mut processed_hosts = Vec::new();
+
+    if args.vendor {
+        for mut host in hosts {
+            host.get_vendor()?;
+            processed_hosts.push(host);
+        }
+    } else {
+        processed_hosts = hosts;
+    }
+
     if all_ports.is_empty() {
-        match scan_network(ips, args.interface).await {
-            Ok(results) => {
-                println!("Scan complete. Results:");
-                for (ip, mac, hostname) in results {
-                    println!("IP: {} MAC: {} Hostname: {}", ip, mac, hostname);
-                }
-            }
-            Err(e) => eprintln!("Error during scan: {:?}", e),
+        println!("Scan complete. Results:");
+        for host in processed_hosts {
+            println!("{}", host);
         }
     } else if ips.len() == 1 {
-        let results = scan_ports(ips[0], &all_ports).await;
+        let results = scan_ports(processed_hosts[0].ip, &all_ports).await;
         println!("Scan complete. Results:");
         for port in results {
-            println!("Port: {}", port);
+            println!("{} Port: {}", processed_hosts[0], port);
         }
     } else {
         return Err(Error::from(clap::Error::raw(
@@ -205,7 +218,6 @@ async fn main() -> Result<()> {
             "To Many IPs to scan ports on! please only provide one IP to scan ports on using the `-i` flag or the `--ip` flag.",
         )));
     }
-
 
     Ok(())
 }

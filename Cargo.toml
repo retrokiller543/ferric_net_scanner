@@ -12,3 +12,5 @@ dns-lookup = "2.0.4"
 clap = { version = "4.0.32", features = ["derive"] }
 indicatif = "0.17.8"
 rayon = "1.10.0"
+oui = "0.8.1"
+eui48 = "1.1.0"

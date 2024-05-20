@@ -14,8 +14,9 @@ use std::sync::{
     Arc, Mutex,
 };
 use std::time::Duration;
+use crate::host::Host;
 
-fn get_mac_for_ip(ip: Ipv4Addr, arp_client: &mut ArpClient) -> Result<MacAddr> {
+pub(crate) fn get_mac_for_ip(ip: Ipv4Addr, arp_client: &mut ArpClient) -> Result<MacAddr> {
     let timeout = Duration::from_millis(250);
     let result = match arp_client.ip_to_mac(ip, Some(timeout)) {
         Ok(result) => result,
@@ -33,7 +34,7 @@ fn get_mac_for_ip(ip: Ipv4Addr, arp_client: &mut ArpClient) -> Result<MacAddr> {
 pub async fn scan_network(
     ips: Vec<Ipv4Addr>,
     iface: Option<String>,
-) -> Result<Vec<(Ipv4Addr, MacAddr, String)>> {
+) -> Result<Vec<Host>> {
     let iface = if let Some(interface) = iface {
         Interface::new_by_name(&interface).ok_or(anyhow!("Failed to find interface"))?
     } else {
@@ -76,7 +77,7 @@ pub async fn scan_network(
         }));
     });
 
-    let results: Vec<_> = ips
+    let results: Vec<Host> = ips
         .into_par_iter()
         .filter_map(|ip| {
             if panic_flag.load(Ordering::SeqCst) {
@@ -91,18 +92,17 @@ pub async fn scan_network(
             };
 
             pb.inc(1);
+
             if ip == local_ip {
                 let hostname =
                     lookup_addr(&IpAddr::V4(ip)).unwrap_or_else(|_| "Not found".to_string());
-                Some((ip, iface.get_mac().ok()?, hostname))
+                Some((ip, iface.get_mac().ok()?, hostname).into())
             } else {
-                get_mac_for_ip(ip, &mut arp_client)
-                    .ok()
-                    .and_then(|mac| {
-                        let hostname = lookup_addr(&IpAddr::V4(ip))
-                            .unwrap_or_else(|_| "Not found".to_string());
-                        Some((ip, mac, hostname))
-                    })
+                get_mac_for_ip(ip, &mut arp_client).ok().map(|mac| {
+                    let hostname =
+                        lookup_addr(&IpAddr::V4(ip)).unwrap_or_else(|_| "Not found".to_string());
+                    (ip, mac, hostname).into()
+                })
             }
         })
         .collect();

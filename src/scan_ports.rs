@@ -1,10 +1,10 @@
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-use std::time::Duration;
 use indicatif::{ProgressBar, ProgressStyle};
-use tokio::net::TcpStream;
-use tokio::time::timeout;
-use tokio::task;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
+use tokio::net::TcpStream;
+use tokio::task;
+use tokio::time::timeout;
 
 pub async fn scan_ports(ip: Ipv4Addr, ports: &[u16]) -> Vec<u16> {
     let mut tasks = Vec::new();
@@ -17,9 +17,12 @@ pub async fn scan_ports(ip: Ipv4Addr, ports: &[u16]) -> Vec<u16> {
     dbg!(&ports[ports.len() - 1]);
 
     let pb = ProgressBar::new(ports.len() as u64);
-    pb.set_style(ProgressStyle::default_bar()
-        .template("[{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} {msg}").unwrap()
-        .progress_chars("##-"));
+    pb.set_style(
+        ProgressStyle::default_bar()
+            .template("[{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} {msg}")
+            .unwrap()
+            .progress_chars("##-"),
+    );
 
     // Wrap the progress bar in a Arc and Mutex to share safely across threads
     let pb = Arc::new(Mutex::new(pb));
@@ -28,13 +31,15 @@ pub async fn scan_ports(ip: Ipv4Addr, ports: &[u16]) -> Vec<u16> {
         let pb = Arc::clone(&pb); // Clone the Arc to obtain a new reference for the thread
         let socket_addr = SocketAddr::new(IpAddr::V4(ip), port);
         let task = task::spawn(async move {
-            if let Ok(Ok(_)) = timeout(Duration::from_secs(3), TcpStream::connect(&socket_addr)).await {
-                let mut pb = pb.lock().unwrap(); // Lock the Mutex to access the progress bar
+            if let Ok(Ok(_)) =
+                timeout(Duration::from_secs(3), TcpStream::connect(&socket_addr)).await
+            {
+                let pb = pb.lock().unwrap(); // Lock the Mutex to access the progress bar
                 pb.inc(1);
                 drop(pb); // Explicitly drop the lock
                 Some(port)
             } else {
-                let mut pb = pb.lock().unwrap();
+                let pb = pb.lock().unwrap();
                 pb.inc(1);
                 drop(pb);
                 None
@@ -50,7 +55,7 @@ pub async fn scan_ports(ip: Ipv4Addr, ports: &[u16]) -> Vec<u16> {
         }
     }
 
-    let mut pb = pb.lock().unwrap();
+    let pb = pb.lock().unwrap();
     pb.finish_with_message("Port Scan done!");
 
     open_ports
