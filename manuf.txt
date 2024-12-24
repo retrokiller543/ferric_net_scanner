@@ -36403,6 +36403,7 @@
 84:FD:D1         	Intel       	Intel Corporate
 84:FE:9E         	RTCIndustrie	RTC Industries, Inc.
 84:FE:DC         	BorqsBeijing	Borqs Beijing Ltd.
+86:C5:29         	Apple       	Apple, Inc.
 88:01:0C         	SichuanTiany	Sichuan Tianyi Comheart Telecom Co.,LTD
 88:01:18         	BLT         	BLT Co
 88:01:F2         	VitecSystemE	Vitec System Engineering Inc.
@@ -46860,6 +46861,7 @@ D4:F9:8D         	Espressif   	Espressif Inc.
 D4:F9:A1         	HuaweiTechno	Huawei Technologies Co.,Ltd
 D4:FB:8E         	Apple       	Apple, Inc.
 D4:FC:13         	FiberhomeTel	Fiberhome Telecommunication Technologies Co.,LTD
+D6:18:F4         	SamsungElect	Samsung Electronics Rand MAC Co.,Ltd
 D8:00:4D         	Apple       	Apple, Inc.
 D8:00:93         	Aurender    	Aurender Inc.
 D8:02:8A         	YOUHUATechno	Shenzhen YOUHUA Technology Co., Ltd

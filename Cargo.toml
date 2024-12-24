@@ -4,7 +4,8 @@ version = "0.0.0"
 edition = "2021"
 
 [dependencies]
-tokio = { version = "1.37.0", features = ["rt", "rt-multi-thread", "macros", "time", "net"] }
+csnmp = "0.6.0"
+tokio = { version = "1.37.0", features = ["full"] }
 anyhow = "1.0.86"
 pnet = "0.34.0"
 arp-toolkit = { version =  "0.3.2", features = ["sync"] }

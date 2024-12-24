@@ -4,14 +4,18 @@
 mod host;
 mod scan_network;
 mod scan_ports;
+mod snmp;
 
+use std::collections::BTreeSet;
 use std::net::Ipv4Addr;
+use std::time::Duration;
 
-use crate::scan_network::scan_network;
+use crate::scan_network::{get_ip_for_mac, scan_network};
 use crate::scan_ports::scan_ports;
 use anyhow::{Error, Result};
 use clap::error::ErrorKind;
 use clap::Parser;
+use crate::snmp::SnmpDevice;
 
 const MAC_ADDRESS_DB: &str = include_str!("../manuf.txt");
 
@@ -49,6 +53,12 @@ struct Args {
 
     #[arg(short, long)]
     vendor: bool,
+
+    #[arg(short = 'V', long)]
+    verbose: bool,
+
+    #[arg(short, long)]
+    topology: bool,
 }
 
 fn parse_ports(ports: &str) -> Vec<u16> {
@@ -202,16 +212,40 @@ async fn main() -> Result<()> {
         processed_hosts = hosts;
     }
 
+    if args.topology {
+        let hosts_clone = processed_hosts.clone();
+        for host in &processed_hosts {
+            let mut snmp_device = SnmpDevice::new(host.ip, 161, "public".to_string(), Some(Duration::from_secs(2)), None);
+            match snmp_device.get_all(hosts_clone.clone()).await {
+                Ok(_) => {}
+                Err(_) => {
+                    continue;
+                }
+            };
+            println!("ip for mac: {}", get_ip_for_mac(host.clone().mac.into())?);
+            println!("{:#?}", snmp_device);
+        }
+        return Ok(());
+    }
+
     if all_ports.is_empty() {
         println!("Scan complete. Results:");
         for host in processed_hosts {
-            println!("{}", host);
+            if args.verbose {
+                println!("{}", host.verbose());
+            } else {
+                println!("{}", host);
+            }
         }
     } else if ips.len() == 1 {
         let results = scan_ports(processed_hosts[0].ip, &all_ports).await;
         println!("Scan complete. Results:");
         for port in results {
-            println!("{} Port: {}", processed_hosts[0], port);
+            if args.verbose {
+                println!("{} Port: {}", processed_hosts[0].verbose_str(), port);
+            } else {
+                println!("{} Port: {}", processed_hosts[0], port);
+            }
         }
     } else {
         return Err(Error::from(clap::Error::raw(

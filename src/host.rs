@@ -4,10 +4,12 @@ use dns_lookup::lookup_addr;
 use eui48::MacAddress as ExternMacAddress;
 use libarp::interfaces::MacAddr;
 use oui::OuiEntry;
-use std::fmt::Display;
+use std::fmt::{Debug, Display};
 use std::net::{IpAddr, Ipv4Addr};
+use std::str::FromStr;
 use std::time::Duration;
 
+#[derive(Clone, Debug)]
 pub struct Host {
     pub ip: Ipv4Addr,
     pub mac: MacAddrData,
@@ -28,6 +30,22 @@ impl Host {
 
     pub fn get_vendor(&mut self) -> anyhow::Result<()> {
         self.mac.look_up_vendor()
+    }
+
+    pub fn verbose_str(&self) -> String {
+        let vendor = if let Some(vendor) = &self.mac.vendor {
+            vendor
+        } else {
+            &OuiEntry::default()
+        };
+        format!(
+            "IP: {}\n\tMAC: {}\n\tVendor: {{\n\t\tShortname: {},\n\t\tLongname: {},\n\t\tDescription: {}\n\t}}\n\tHostname: {}",
+            self.ip, self.mac.mac_addr, vendor.name_short, vendor.clone().name_long.unwrap_or("Not Found".to_string()), vendor.clone().comment.unwrap_or("Not Found".to_string()), self.hostname
+        )
+    }
+
+    pub fn verbose(&self) -> String{
+        format!("IP: {}\n{:?}\nHostname: {}", self.ip, self.mac, self.hostname)
     }
 }
 
@@ -91,12 +109,13 @@ impl From<MacAddr> for Host {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MacAddrData {
     pub mac_addr: MacAddress,
     pub vendor: Option<OuiEntry>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MacAddress {
     pub mac_addr: ExternMacAddress,
 }
@@ -181,5 +200,27 @@ impl Display for MacAddrData {
         } else {
             write!(f, "{}", self.mac_addr)
         }
+    }
+}
+
+impl FromStr for MacAddress {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self::from(ExternMacAddress::from_str(s)?))
+    }
+}
+
+impl From<MacAddrData> for MacAddr {
+    fn from(mac_addr: MacAddrData) -> Self {
+        let mac_addr = mac_addr.mac_addr.mac_addr.as_bytes();
+        Self::new(
+            mac_addr[0],
+            mac_addr[1],
+            mac_addr[2],
+            mac_addr[3],
+            mac_addr[4],
+            mac_addr[5],
+        )
     }
 }

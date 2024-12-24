@@ -15,6 +15,8 @@ use std::sync::{
     Arc, Mutex,
 };
 use std::time::Duration;
+use libarp::arp;
+use libarp::arp::ArpMessage;
 
 pub(crate) fn get_mac_for_ip(ip: Ipv4Addr, arp_client: &mut ArpClient) -> Result<MacAddr> {
     let timeout = Duration::from_millis(250);
@@ -28,6 +30,32 @@ pub(crate) fn get_mac_for_ip(ip: Ipv4Addr, arp_client: &mut ArpClient) -> Result
             }
         }
     };
+    Ok(result)
+}
+
+pub(crate) fn get_ip_for_mac(mac: MacAddr) -> Result<Ipv4Addr> {
+    let timeout = Duration::from_millis(10000);
+    let iface = Interface::new()?;
+    let mut client = ArpClient::new_with_iface(&iface)?;
+    let arp_request = ArpMessage::new_rarp_request(
+        iface.get_mac().unwrap().into(),
+        mac.into(),
+    );
+
+    let result = client.send_message_with_check(Some(timeout), arp_request, |arp_msg| {
+        let source_mac: MacAddr = arp_msg.source_hardware_address.into();
+
+        if source_mac == mac && arp_msg.operation == arp::Operation::RarpResponse {
+            Some(arp_msg.target_protocol_address)
+        } else {
+            None
+        }
+    })?;
+    println!(
+        "Advanced: IP for MAC {} is {}",
+        mac, result
+    );
+
     Ok(result)
 }
 
